@@ -2,24 +2,41 @@ package com.example.zilean;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.graphics.drawable.Drawable;
+import android.os.Bundle;
+import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Vibrator;
 import android.support.v7.app.AppCompatActivity;
-import android.os.Bundle;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
 import android.widget.ImageButton;
+import android.widget.ImageView;
+import android.widget.RelativeLayout;
 import android.widget.TextView;
 
 import org.xutils.view.annotation.Event;
 import org.xutils.view.annotation.ViewInject;
 import org.xutils.x;
 
+import java.io.File;
+
 public class MainActivity extends AppCompatActivity {
     //    private final boolean isTest = false;
+    private final int REQUEST_SET = 1;
     private boolean isTest = false;
+    private final String FILENAME = "background.png";
+    private final String FILENAME_TEMP = "background_temp.png";
+    private final String FILE_DIR = "Zilean";
+    private final String PACKET_NAME = "com.example.zilean";
+
+    @ViewInject(R.id.activity_main)
+    private RelativeLayout activity_main;
+
+    @ViewInject(R.id.iv_background)
+    private ImageView iv_background;
 
     @ViewInject(R.id.ibtn_setting)
     private ImageButton ibtn_setting;
@@ -53,6 +70,8 @@ public class MainActivity extends AppCompatActivity {
     private int longRest;
     private boolean autoWork;
     private boolean autoRest;
+    private boolean isShark;
+    private boolean isRing;
 
 
     @Override
@@ -62,6 +81,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         x.view().inject(this);
         init();
+        setBackground();
 
     }
 
@@ -73,6 +93,8 @@ public class MainActivity extends AppCompatActivity {
         longRest = sharedPreferences.getInt("longRest", 15);
         autoWork = sharedPreferences.getBoolean("autoWork", false);
         autoRest = sharedPreferences.getBoolean("autoRest", false);
+        isShark = sharedPreferences.getBoolean("isShark", true);
+        isRing = sharedPreferences.getBoolean("isRing", false);
         myTimeHandler = new MyTimeHandler();
         myTimeHandler.setTomatoThread(new TomatoThread(work, 0));
         myGoHandler = new MyGoHandler();
@@ -82,7 +104,7 @@ public class MainActivity extends AppCompatActivity {
 
     public void startRemind(long[] vibratorTime) {
         //震动提醒
-        if (vibrator.hasVibrator()) {
+        if (vibrator.hasVibrator() && isShark) {
             vibrator.cancel();
             switch (vibratorTime.length) {
                 case 0:
@@ -96,6 +118,9 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         //铃声提醒
+//        if (isRing) {
+//
+//        }
     }
 
     @Event(value = R.id.cb_context3, type = CompoundButton.OnCheckedChangeListener.class)
@@ -106,7 +131,7 @@ public class MainActivity extends AppCompatActivity {
     @Event(R.id.ibtn_setting)
     private void onSetting(View view) {
         Intent intent = new Intent(MainActivity.this, DialogActivity.class);
-        startActivityForResult(intent, 1);
+        startActivityForResult(intent, REQUEST_SET);
     }
 
     @Event(R.id.ibtn_go)
@@ -122,12 +147,17 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (resultCode == 1 && requestCode == 1) {
+        if (resultCode == RESULT_OK && requestCode == REQUEST_SET) {
             work = data.getIntExtra("work", work);
             shortRest = data.getIntExtra("shortRest", shortRest);
             longRest = data.getIntExtra("longRest", longRest);
-            autoWork = sharedPreferences.getBoolean("autoWork", autoWork);
-            autoRest = sharedPreferences.getBoolean("autoRest", autoRest);
+            autoWork = data.getBooleanExtra("autoWork", autoWork);
+            autoRest = data.getBooleanExtra("autoRest", autoRest);
+            isShark = data.getBooleanExtra("isShark", isShark);
+            isRing = data.getBooleanExtra("isRing", isRing);
+            if (data.getBooleanExtra("isBackground", false)) {
+                setBackground();
+            }
         }
     }
 
@@ -177,6 +207,18 @@ public class MainActivity extends AppCompatActivity {
         });
     }
 
+    public void setBackground() {
+        String path1 = Environment.getExternalStorageDirectory() + File.separator + FILE_DIR;
+        String path2 = "/data" + Environment.getDataDirectory().getAbsolutePath() + File.separator + PACKET_NAME + "/files/";
+        boolean isSDExist = Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED);
+//        isSDExist = false;
+        File file = new File(isSDExist? path1 : path2, FILENAME);
+        if (file.exists()) {
+            Drawable drawable = Drawable.createFromPath(file.getAbsolutePath());
+            iv_background.setImageDrawable(drawable);
+        }
+    }
+
     public class MyTimeHandler extends Handler {
         int tomato = 0;
         int rest = 0;
@@ -223,7 +265,7 @@ public class MainActivity extends AppCompatActivity {
                             tomatoThread = new TomatoThread(shortRest, 0);
                             tv_state.setText(stateType[1]);
                         }
-                        startRemind(new long[]{0,1000,500,2000});
+                        startRemind(new long[]{0, 1000, 500, 2000});
                         if (autoRest) startThread();
                         else myGoHandler.sendEmptyMessage(3);
                     } else {

@@ -11,6 +11,47 @@
     <LinearLayout
         android:layout_width="match_parent"
         android:layout_height="wrap_content"
+        android:layout_marginBottom="8dp"
+        android:layout_marginTop="8dp"
+        android:gravity="center"
+        android:orientation="horizontal">
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="15dp"
+            android:text="振动 "
+            android:textColor="#000"
+            android:textSize="17dp" />
+
+        <ToggleButton
+            android:id="@+id/tb_shark"
+            android:layout_width="60dp"
+            android:layout_height="40dp"
+            android:layout_marginRight="15dp"
+            android:checked="true"
+            android:gravity="center" />
+
+        <TextView
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_marginLeft="15dp"
+            android:text="声音 "
+            android:textColor="#000"
+            android:textSize="17dp" />
+
+        <ToggleButton
+            android:id="@+id/tb_ring"
+            android:layout_width="60dp"
+            android:layout_height="40dp"
+            android:layout_marginRight="15dp"
+            android:checked="false" />
+
+    </LinearLayout>
+
+    <LinearLayout
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
         android:gravity="center_vertical"
         android:orientation="horizontal">
 
@@ -27,9 +68,9 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:digits="0123456789"
             android:gravity="center"
             android:text="0"
-            android:digits="0123456789"
             android:textColor="#1fa5e9" />
 
         <TextView
@@ -69,9 +110,9 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:digits="0123456789"
             android:gravity="center"
             android:text="0"
-            android:digits="0123456789"
             android:textColor="#1fa5e9" />
 
         <TextView
@@ -110,9 +151,9 @@
             android:layout_width="0dp"
             android:layout_height="wrap_content"
             android:layout_weight="1"
+            android:digits="0123456789"
             android:gravity="center"
             android:text="0"
-            android:digits="0123456789"
             android:textColor="#1fa5e9" />
 
         <TextView
@@ -131,6 +172,17 @@
             android:max="60"
             android:progress="0" />
     </LinearLayout>
+
+    <TextView
+        android:id="@+id/tv_background"
+        android:layout_width="match_parent"
+        android:layout_height="wrap_content"
+        android:background="@drawable/setting_back"
+        android:gravity="center"
+        android:padding="7dp"
+        android:text="设置壁纸"
+        android:textColor="#000"
+        android:textSize="19sp" />
 
     <LinearLayout
         android:layout_width="match_parent"

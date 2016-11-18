@@ -4,71 +4,104 @@
     android:id="@+id/activity_main"
     android:layout_width="match_parent"
     android:layout_height="match_parent"
-    android:paddingBottom="@dimen/activity_vertical_margin"
-    android:paddingLeft="@dimen/activity_horizontal_margin"
-    android:paddingRight="@dimen/activity_horizontal_margin"
-    android:paddingTop="@dimen/activity_vertical_margin"
+    android:background="#aaa"
+
     tools:context="com.example.zilean.MainActivity">
 
-    <ImageButton
-        android:id="@+id/ibtn_setting"
-        android:layout_width="30dp"
-        android:layout_height="30dp"
-        android:layout_alignParentRight="true"
-        android:layout_alignParentTop="true"
-        android:background="@drawable/setting" />
+    <ImageView
+        android:id="@+id/iv_background"
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:scaleType="centerCrop" />
 
     <LinearLayout
-        android:id="@+id/ll_context"
-        android:layout_width="wrap_content"
+        android:id="@+id/ll_title"
+        android:layout_width="match_parent"
         android:layout_height="wrap_content"
-        android:layout_alignParentLeft="true"
-        android:layout_toLeftOf="@id/ibtn_setting"
-        android:orientation="vertical">
+        android:background="#6fff"
+        android:orientation="horizontal"
+        android:padding="12dp">
 
-        <CheckBox
-            android:id="@+id/cb_context1"
-            android:layout_width="match_parent"
+        <LinearLayout
+            android:id="@+id/ll_context"
+            android:layout_width="wrap_content"
             android:layout_height="wrap_content"
-            android:text="123" />
+            android:layout_weight="1"
+            android:orientation="vertical">
 
-        <CheckBox
-            android:id="@+id/cb_context2"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="234" />
+            <CheckBox
+                android:id="@+id/cb_context1"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="123" />
 
-        <CheckBox
-            android:id="@+id/cb_context3"
-            android:layout_width="match_parent"
-            android:layout_height="wrap_content"
-            android:text="isTest?" />
+            <CheckBox
+                android:id="@+id/cb_context2"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="234" />
+
+            <CheckBox
+                android:id="@+id/cb_context3"
+                android:layout_width="match_parent"
+                android:layout_height="wrap_content"
+                android:text="isTest?" />
+        </LinearLayout>
+
+        <ImageButton
+            android:id="@+id/ibtn_setting"
+            android:layout_width="30dp"
+            android:layout_height="30dp"
+            android:layout_alignParentRight="true"
+            android:layout_alignParentTop="true"
+            android:background="@drawable/setting" />
     </LinearLayout>
 
-    <TextView
-        android:id="@+id/tv_time"
-        android:layout_width="wrap_content"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/ll_context"
-        android:layout_centerHorizontal="true"
-        android:layout_marginTop="20dp"
-        android:text="25:00"
-        android:textSize="50dp" />
+    <RelativeLayout
+        android:layout_width="match_parent"
+        android:layout_height="match_parent"
+        android:layout_below="@+id/ll_title">
 
-    <ImageButton
-        android:id="@+id/ibtn_go"
-        android:layout_width="70dp"
-        android:layout_height="70dp"
-        android:layout_below="@id/tv_time"
-        android:layout_centerHorizontal="true"
-        android:background="@drawable/go" />
+        <RelativeLayout
+            android:id="@+id/rl_go"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_centerInParent="true">
 
-    <TextView
-        android:id="@+id/tv_state"
-        android:layout_width="wrap_content"
-        android:layout_marginTop="10dp"
-        android:layout_height="wrap_content"
-        android:layout_below="@+id/ibtn_go"
-        android:layout_centerHorizontal="true"
-        android:text="工作" />
+            <ImageButton
+                android:id="@+id/ibtn_go"
+                android:layout_width="110dp"
+                android:layout_height="110dp"
+                android:src="@drawable/go"
+                android:background="#0fff"/>
+
+            <TextView
+                android:id="@+id/tv_state"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_centerInParent="true"
+                android:layout_marginTop="10dp"
+                android:gravity="center"
+                android:text="工作"
+                android:background="@drawable/go_back"
+                android:textStyle="bold" />
+        </RelativeLayout>
+
+        <TextView
+            android:id="@+id/tv_time"
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_above="@id/rl_go"
+            android:layout_centerHorizontal="true"
+            android:layout_marginTop="40dp"
+            android:background="@drawable/time_back"
+            android:paddingLeft="30dp"
+            android:paddingRight="30dp"
+            android:text="25:00"
+            android:textSize="50dp" />
+
+
+    </RelativeLayout>
+
+
 </RelativeLayout>
