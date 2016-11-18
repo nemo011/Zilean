@@ -4,6 +4,7 @@ import android.content.Intent;
 import android.content.SharedPreferences;
 import android.os.Handler;
 import android.os.Message;
+import android.os.Vibrator;
 import android.support.v7.app.AppCompatActivity;
 import android.os.Bundle;
 import android.view.View;
@@ -46,6 +47,7 @@ public class MainActivity extends AppCompatActivity {
     private int[] imageId;
     private String[] stateType;
     private SharedPreferences sharedPreferences;
+    private Vibrator vibrator;
     private int work;
     private int shortRest;
     private int longRest;
@@ -65,6 +67,7 @@ public class MainActivity extends AppCompatActivity {
 
     private void init() {
         sharedPreferences = getSharedPreferences("setting", MODE_PRIVATE);
+        vibrator = (Vibrator) getSystemService(VIBRATOR_SERVICE);
         work = sharedPreferences.getInt("work", 25);
         shortRest = sharedPreferences.getInt("shortRest", 5);
         longRest = sharedPreferences.getInt("longRest", 15);
@@ -75,6 +78,24 @@ public class MainActivity extends AppCompatActivity {
         myGoHandler = new MyGoHandler();
         imageId = new int[]{R.drawable.go, R.drawable.stop};
         stateType = new String[]{"工作", "短休息", "长休息"};
+    }
+
+    public void startRemind(long[] vibratorTime) {
+        //震动提醒
+        if (vibrator.hasVibrator()) {
+            vibrator.cancel();
+            switch (vibratorTime.length) {
+                case 0:
+                    break;
+                case 1:
+                    vibrator.vibrate(vibratorTime[0]);
+                    break;
+                default:
+                    vibrator.vibrate(vibratorTime, -1);
+                    break;
+            }
+        }
+        //铃声提醒
     }
 
     @Event(value = R.id.cb_context3, type = CompoundButton.OnCheckedChangeListener.class)
@@ -202,12 +223,14 @@ public class MainActivity extends AppCompatActivity {
                             tomatoThread = new TomatoThread(shortRest, 0);
                             tv_state.setText(stateType[1]);
                         }
+                        startRemind(new long[]{0,1000,500,2000});
                         if (autoRest) startThread();
                         else myGoHandler.sendEmptyMessage(3);
                     } else {
                         rest++;
                         tomatoThread = new TomatoThread(work, 0);
                         tv_state.setText(stateType[0]);
+                        startRemind(new long[]{1000});
                         if (autoWork) startThread();
                         else myGoHandler.sendEmptyMessage(3);
                     }
