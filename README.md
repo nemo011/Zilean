@@ -15,4 +15,8 @@ A light-weight time management app.(unfinished)
 
 2、自定义各阶段的时钟时长
 
-3、设置时钟是否会自动开始
+3、设置时钟是否自动开始
+
+4、背景图片设置
+
+5、时间到了振动提醒
