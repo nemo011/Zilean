@@ -20,11 +20,13 @@ android {
 }
 
 dependencies {
+//    compile project(':lib')
     compile fileTree(dir: 'libs', include: ['*.jar'])
     androidTestCompile('com.android.support.test.espresso:espresso-core:2.2.2', {
         exclude group: 'com.android.support', module: 'support-annotations'
     })
     compile 'com.android.support:appcompat-v7:25.0.1'
     compile 'org.xutils:xutils:3.3.38'
+    compile 'com.soundcloud.android:android-crop:1.0.1@aar'
     testCompile 'junit:junit:4.12'
 }

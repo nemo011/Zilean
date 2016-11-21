@@ -20,26 +20,20 @@ import android.widget.SeekBar;
 import android.widget.TextView;
 import android.widget.ToggleButton;
 
+import com.example.zilean.TheUtils.Constant;
+import com.example.zilean.TheUtils.Utils;
+import com.soundcloud.android.crop.Crop;
+
 import org.xutils.view.annotation.Event;
 import org.xutils.view.annotation.ViewInject;
 import org.xutils.x;
 
 import java.io.File;
-import java.io.FileInputStream;
-import java.io.FileNotFoundException;
-import java.io.FileOutputStream;
-import java.io.IOException;
 
 //@ContentView(R.layout.activity_dialog)
 public class DialogActivity extends AppCompatActivity {
+    private final boolean isLog = false;
     private final boolean ISENABLE_ET = false;
-    private final int RESULT_CAMERA = 1;
-    private final int RESULT_PHOTO = 2;
-    private final int RESULT_CROP = 3;
-    private final String FILENAME = "background.png";
-    private final String FILENAME_TEMP = "background_temp.png";
-    private final String FILE_DIR = "Zilean";
-    private final String PACKET_NAME = "com.example.zilean";
 
     @ViewInject(R.id.et_work)
     private EditText et_work;
@@ -92,6 +86,7 @@ public class DialogActivity extends AppCompatActivity {
     private Bitmap bitmap;
     private int screenWidth;
     private int screenHeight;
+    private int screenGcd;
     private File file;
     private File tempFile;
     private boolean isSDExist;
@@ -121,10 +116,18 @@ public class DialogActivity extends AppCompatActivity {
         getWindowManager().getDefaultDisplay().getMetrics(dm);
         screenWidth = dm.widthPixels;
         screenHeight = dm.heightPixels;
-        String path1 = Environment.getExternalStorageDirectory() + File.separator + FILE_DIR;
-        String path2 = "/data" + Environment.getDataDirectory().getAbsolutePath() + File.separator + PACKET_NAME + "/files/";
-        file = new File(isSDExist ? path1 : path2, FILENAME);
-        tempFile = new File(isSDExist ? path1 : path2, FILENAME_TEMP);
+        screenGcd = Utils.gcd(screenHeight, screenWidth);
+        Utils.showLog("比例", screenWidth / screenGcd + ":" + screenHeight / screenGcd, isLog);
+//        String path1 = Environment.getExternalStorageDirectory() + File.separator + Constant.FILE_DIR;
+//        String path2 = "/data/data/" + getPackageName() + "/files";
+        String path1 = getExternalFilesDir(null).getAbsolutePath();
+        String path2 = getFilesDir().getAbsolutePath();
+        Utils.showLog("路径1", path1, isLog);
+        Utils.showLog("路径2", path2, isLog);
+//        isSDExist = false;
+        file = new File(isSDExist ? path1 : path2, Constant.FILENAME);
+        tempFile = new File(isSDExist ? path1 : path2, Constant.FILENAME_TEMP);
+        Utils.mkdirsFile(tempFile);
 
         et_work.setEnabled(ISENABLE_ET);
         et_shortRest.setEnabled(ISENABLE_ET);
@@ -151,7 +154,7 @@ public class DialogActivity extends AppCompatActivity {
                 .putBoolean("autoWork", autoWork)
                 .putBoolean("autoRest", autoRest)
                 .putBoolean("isShark", isShark)
-                .putBoolean("isRing", isRing).commit();
+                .putBoolean("isRing", isRing).apply();
         Intent intent = new Intent();
         intent.putExtra("work", work);
         intent.putExtra("shortRest", shortRest);
@@ -162,7 +165,7 @@ public class DialogActivity extends AppCompatActivity {
         intent.putExtra("isRing", isRing);
         intent.putExtra("isBackground", isBackground);
         setResult(RESULT_OK, intent);
-        savePhoto(tempFile, file);
+        Utils.file2File(tempFile, file);
         finish();
     }
 
@@ -222,108 +225,32 @@ public class DialogActivity extends AppCompatActivity {
     @Event(R.id.tv_background)
     private void onBackground(View view) {
         // 激活系统图库，选择一张图片
-        Intent intent = new Intent(Intent.ACTION_PICK);
-        intent.setType("image/*");
-        // 开启一个带有返回值的Activity，请求码为RESULT_PHOTO
-        startActivityForResult(intent, RESULT_PHOTO);
+        /* new Intent(Intent.ACTION_PICK)方式 */
+//        Intent intent = new Intent(Intent.ACTION_PICK);
+//        intent.setType("image/*");
+//        // 开启一个带有返回值的Activity，请求码为RESULT_PHOTO
+//        startActivityForResult(intent, REQUEST_PHOTO);
+
+        /* new Intent("android.intent.action.GET_CONTENT")方式 */
+        Crop.pickImage(this);
     }
 
     @Override
     protected void onActivityResult(int requestCode, int resultCode, Intent data) {
-        if (requestCode == RESULT_PHOTO) {
-            // 从相册返回的数据
-            if (data != null) {
-                // 得到图片的全路径
-                Uri uri = data.getData();
-//                Log.e("路径1", uri.toString());
-                if (tempFile.exists()) tempFile.delete();
-                crop(uri);
-            }
-        } else if (requestCode == RESULT_CROP) {
-            // 从剪切图片返回的数据
-            if (data != null) {
-                isBackground = true;
-                if (!isSDExist) {
-                    bitmap = data.getParcelableExtra("data");
-                    try {
-                        saveBitmap(bitmap, tempFile);
-                    } catch (IOException e) {
-                        e.printStackTrace();
-                    }
-                }
-            }
+        if (requestCode == Crop.REQUEST_PICK && resultCode == RESULT_OK) {
+            beginCrop(data.getData());
+        } else if (requestCode == Crop.REQUEST_CROP) {
+            isBackground = true;
         }
         super.onActivityResult(requestCode, resultCode, data);
     }
 
-    private void crop(Uri uri) {
-        // 裁剪图片意图
-        Intent intent = new Intent("com.android.camera.action.CROP");
-        intent.setDataAndType(uri, "image/*");
-        intent.putExtra("crop", "true");// 发送裁剪信号
-        // 裁剪框的比例
-        intent.putExtra("aspectX", 9);
-        intent.putExtra("aspectY", 16);
-        intent.putExtra("scale", true);
-        // 裁剪后输出图片的尺寸大小
-        intent.putExtra("outputX", screenWidth);
-        intent.putExtra("outputY", screenHeight);
-
-        intent.putExtra("outputFormat", Bitmap.CompressFormat.PNG.toString());// 图片格式
-        intent.putExtra("noFaceDetection", true);// 取消人脸识别
-        if (isSDExist) {
-            //以Uri格式可以保存大分辨率的图，但必须要SD卡支持
-            intent.putExtra("return-data", false);
-            intent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.fromFile(tempFile));
-//        intent.putExtra(MediaStore.EXTRA_OUTPUT, Uri.parse("file:///sdcard/"+FILENAME_STORAGE));
-        } else {
-            //Bitmap格式传的是小分辨率的图，只适合小图裁剪
-            intent.putExtra("return-data", true);// 是否将数据保留在Bitmap中返回
-        }
-        // 开启一个带有返回值的Activity，请求码为RESULT_CROP
-        startActivityForResult(intent, RESULT_CROP);
+    private void beginCrop(Uri source) {
+        Uri destination = Uri.fromFile(tempFile);
+        Crop crop = Crop.of(source, destination)
+                .withAspect(screenWidth / screenGcd, screenHeight / screenGcd);
+        crop.start(this);
     }
-
-    private void saveBitmap(Bitmap bitmap, File file) throws IOException {
-        File parentFile = file.getParentFile();
-        if (!parentFile.exists()) parentFile.mkdirs();
-        if (file.exists()) {
-            file.delete();
-        }
-        FileOutputStream out;
-        try {
-            out = new FileOutputStream(file);
-            if (bitmap.compress(Bitmap.CompressFormat.PNG, 90, out)) {
-                out.flush();
-                out.close();
-            }
-        } catch (FileNotFoundException e) {
-            e.printStackTrace();
-        } catch (IOException e) {
-            e.printStackTrace();
-        }
-    }
-
-    private void savePhoto(File temp, File file) {
-        if (temp.exists()) {
-            File parentFile = file.getParentFile();
-            if (!parentFile.exists()) parentFile.mkdirs();
-            if (file.exists()) file.delete();
-            byte[] bytes = new byte[1024];
-            int i = -1;
-            try {
-                FileInputStream fis = new FileInputStream(temp);
-                FileOutputStream fos = new FileOutputStream(file);
-                while ((i = fis.read(bytes)) != -1) fos.write(bytes, 0, i);
-            } catch (FileNotFoundException e) {
-                e.printStackTrace();
-            } catch (IOException e) {
-                e.printStackTrace();
-            }
-            temp.delete();
-        }
-    }
-
     public class MyWacher implements TextWatcher {
         private EditText et = null;
         private SeekBar sb = null;

@@ -2,13 +2,18 @@ package com.example.zilean;
 
 import android.content.Intent;
 import android.content.SharedPreferences;
+import android.content.res.AssetFileDescriptor;
 import android.graphics.drawable.Drawable;
+import android.media.AudioManager;
+import android.media.MediaPlayer;
 import android.os.Bundle;
+import android.os.CountDownTimer;
 import android.os.Environment;
 import android.os.Handler;
 import android.os.Message;
 import android.os.Vibrator;
 import android.support.v7.app.AppCompatActivity;
+import android.util.Log;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
@@ -17,20 +22,21 @@ import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import com.example.zilean.TheUtils.Constant;
+import com.example.zilean.TheUtils.Utils;
+
 import org.xutils.view.annotation.Event;
 import org.xutils.view.annotation.ViewInject;
 import org.xutils.x;
 
 import java.io.File;
+import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity {
     //    private final boolean isTest = false;
+    private final boolean isLog = false;
     private final int REQUEST_SET = 1;
     private boolean isTest = false;
-    private final String FILENAME = "background.png";
-    private final String FILENAME_TEMP = "background_temp.png";
-    private final String FILE_DIR = "Zilean";
-    private final String PACKET_NAME = "com.example.zilean";
 
     @ViewInject(R.id.activity_main)
     private RelativeLayout activity_main;
@@ -65,6 +71,7 @@ public class MainActivity extends AppCompatActivity {
     private String[] stateType;
     private SharedPreferences sharedPreferences;
     private Vibrator vibrator;
+    private MediaPlayer mediaPlayer;
     private int work;
     private int shortRest;
     private int longRest;
@@ -82,7 +89,6 @@ public class MainActivity extends AppCompatActivity {
         x.view().inject(this);
         init();
         setBackground();
-
     }
 
     private void init() {
@@ -96,10 +102,31 @@ public class MainActivity extends AppCompatActivity {
         isShark = sharedPreferences.getBoolean("isShark", true);
         isRing = sharedPreferences.getBoolean("isRing", false);
         myTimeHandler = new MyTimeHandler();
-        myTimeHandler.setTomatoThread(new TomatoThread(work, 0));
+        myTimeHandler.setTomatoCount(new TomatoCount(work, Constant.TOMATOTYPE_WORK));
         myGoHandler = new MyGoHandler();
         imageId = new int[]{R.drawable.go, R.drawable.stop};
         stateType = new String[]{"工作", "短休息", "长休息"};
+        //铃声
+        this.setVolumeControlStream(AudioManager.STREAM_MUSIC);
+        mediaPlayer = new MediaPlayer();
+        mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
+        mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
+            @Override
+            public void onCompletion(MediaPlayer mediaPlayer) {
+                mediaPlayer.seekTo(0);
+            }
+        });
+        AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.beep);
+        try {
+            mediaPlayer.setDataSource(file.getFileDescriptor(), file.getStartOffset(), file.getLength());
+            file.close();
+            mediaPlayer.setVolume(5.0f, 5.0f);
+//            mediaPlayer.setLooping(true);
+            mediaPlayer.prepare();
+        } catch (IOException e) {
+            e.printStackTrace();
+            mediaPlayer = null;
+        }
     }
 
     public void startRemind(long[] vibratorTime) {
@@ -118,9 +145,9 @@ public class MainActivity extends AppCompatActivity {
             }
         }
         //铃声提醒
-//        if (isRing) {
-//
-//        }
+        if (mediaPlayer != null && isRing) {
+            mediaPlayer.start();
+        }
     }
 
     @Event(value = R.id.cb_context3, type = CompoundButton.OnCheckedChangeListener.class)
@@ -158,6 +185,7 @@ public class MainActivity extends AppCompatActivity {
             if (data.getBooleanExtra("isBackground", false)) {
                 setBackground();
             }
+            myTimeHandler.stopCount();
         }
     }
 
@@ -171,19 +199,17 @@ public class MainActivity extends AppCompatActivity {
                     if (!isClick) {
                         ibtn_go.setImageResource(imageId[1]);
                         isClick = true;
-                        myTimeHandler.startThread();
+                        myTimeHandler.startCount();
                     }
                     break;
                 case 1://点击stop
                     if (isClick) {
-                        ibtn_go.setImageResource(imageId[0]);
-                        isClick = false;
-                        myTimeHandler.stopThread();
+                        myTimeHandler.stopCount();
                     }
                     break;
                 case 2://时间到
                     if (isClick) {
-                        myTimeHandler.nextThread();
+                        myTimeHandler.nextCount();
                     }
                     break;
                 case 3://
@@ -208,11 +234,12 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setBackground() {
-        String path1 = Environment.getExternalStorageDirectory() + File.separator + FILE_DIR;
-        String path2 = "/data" + Environment.getDataDirectory().getAbsolutePath() + File.separator + PACKET_NAME + "/files/";
+        //路径：data/包名/files
+        String path1 = getExternalFilesDir(null).getAbsolutePath();
+        String path2 = getFilesDir().getAbsolutePath();
         boolean isSDExist = Environment.getExternalStorageState().equals(Environment.MEDIA_MOUNTED);
 //        isSDExist = false;
-        File file = new File(isSDExist? path1 : path2, FILENAME);
+        File file = new File(isSDExist ? path1 : path2, Constant.FILENAME);
         if (file.exists()) {
             Drawable drawable = Drawable.createFromPath(file.getAbsolutePath());
             iv_background.setImageDrawable(drawable);
@@ -222,35 +249,30 @@ public class MainActivity extends AppCompatActivity {
     public class MyTimeHandler extends Handler {
         int tomato = 0;
         int rest = 0;
-        TomatoThread tomatoThread = null;
-        Thread thread = null;
-
-        public MyTimeHandler(TomatoThread tomatoThread) {
-            this.tomatoThread = tomatoThread;
-        }
+        TomatoCount tomatoCount = null;
 
         public MyTimeHandler() {
-
         }
 
-        public void setTomatoThread(TomatoThread tomatoThread) {
-            this.tomatoThread = tomatoThread;
+        public void setTomatoCount(TomatoCount tomatoCount) {
+            this.tomatoCount = tomatoCount;
         }
 
-        public void startThread() {
-            thread = new Thread(tomatoThread);
-            thread.start();
+        public void startCount() {
+            if (tomatoCount != null)
+                tomatoCount.start();
         }
 
-        public void nextThread() {
+        public void nextCount() {
             sendEmptyMessage(0);
         }
 
-        public void stopThread() {
-            tomatoThread.setBreak(true);
+        public void stopCount() {
+            if (tomatoCount != null)
+                tomatoCount.cancel();
             sendEmptyMessage(2);
+            myGoHandler.sendEmptyMessage(3);
         }
-
 
         @Override
         public void handleMessage(Message msg) {
@@ -259,21 +281,23 @@ public class MainActivity extends AppCompatActivity {
                     if (tomato == rest) {
                         tomato++;
                         if (tomato % 4 == 0) {
-                            tomatoThread = new TomatoThread(longRest, 0);
+                            tomatoCount = new TomatoCount(longRest, Constant.TOMATOTYPE_LONG);
                             tv_state.setText(stateType[2]);
                         } else {
-                            tomatoThread = new TomatoThread(shortRest, 0);
+                            tomatoCount = new TomatoCount(shortRest, Constant.TOMATOTYPE_SHORT);
                             tv_state.setText(stateType[1]);
                         }
                         startRemind(new long[]{0, 1000, 500, 2000});
-                        if (autoRest) startThread();
+                        if (autoRest)
+                            startCount();
                         else myGoHandler.sendEmptyMessage(3);
                     } else {
                         rest++;
-                        tomatoThread = new TomatoThread(work, 0);
+                        tomatoCount = new TomatoCount(work, Constant.TOMATOTYPE_WORK);
                         tv_state.setText(stateType[0]);
                         startRemind(new long[]{1000});
-                        if (autoWork) startThread();
+                        if (autoWork)
+                            startCount();
                         else myGoHandler.sendEmptyMessage(3);
                     }
                     break;
@@ -281,8 +305,20 @@ public class MainActivity extends AppCompatActivity {
                     setViewText(msg.arg1, msg.arg2);
                     break;
                 case 2://当前计时取消
-                    int time = tomatoThread.getMin();
-                    tomatoThread = new TomatoThread(time, 0);
+                    int type = tomatoCount.getType();
+                    switch (type) {
+                        case Constant.TOMATOTYPE_WORK:
+                            tomatoCount = new TomatoCount(work, Constant.TOMATOTYPE_WORK);
+                            break;
+                        case Constant.TOMATOTYPE_SHORT:
+                            tomatoCount = new TomatoCount(shortRest, Constant.TOMATOTYPE_SHORT);
+                            break;
+                        case Constant.TOMATOTYPE_LONG:
+                            tomatoCount = new TomatoCount(longRest, Constant.TOMATOTYPE_LONG);
+                            break;
+                        default:
+                            break;
+                    }
                     break;
                 case 3:
                     break;
@@ -292,64 +328,55 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public class TomatoThread implements Runnable {
-        int min = 25;
-        int sec = 0;
-        int min_t = min;
-        long time1 = 0;
-        long time2 = 0;
-        boolean isBreak = false;
+    public class TomatoCount extends CountDownTimer {
         Message message = Message.obtain();
+        int type = 0;
 
-        public TomatoThread(int min, int sec) {
-            if (isTest) {
-                this.sec = min;
-                this.min = sec;
-            } else {
-                this.min = min;
-                this.sec = sec;
-            }
+        public TomatoCount(long millisInFuture, long countDownInterval) {
+            super(millisInFuture, countDownInterval);
+        }
 
-            this.min_t = min;
-
+        public TomatoCount(int min, int type) {
+            this(isTest ? min * 1000L : min * 60000L, 100L);
+            this.type = type;
             message.what = 1;
-            message.arg1 = this.min;
-            message.arg2 = this.sec;
+            if (isTest) {
+                message.arg1 = 0;
+                message.arg2 = min;
+            } else {
+                message.arg1 = min;
+                message.arg2 = 0;
+            }
             myTimeHandler.handleMessage(message);
         }
 
-        public int getMin() {
-            return min_t;
-        }
-
-        public void setBreak(boolean aBreak) {
-            isBreak = aBreak;
+        public int getType() {
+            return type;
         }
 
         @Override
-        public void run() {
-            while (min > 0 || sec > 0) {
-                if (isBreak) break;
-                time1 = System.currentTimeMillis();
-                if (sec == 0) {
-                    min--;
-                    sec = 59;
-                } else sec--;
-                message.what = 1;
-                message.arg1 = min;
-                message.arg2 = sec;
-                time2 = System.currentTimeMillis();
-                try {
-                    Thread.sleep(1000 - (time2 - time1));
-                } catch (InterruptedException e) {
-                    e.printStackTrace();
-                }
-                if (isBreak) break;
-                myTimeHandler.handleMessage(message);
-            }
-            if (!isBreak) myGoHandler.sendEmptyMessage(2);
+        public void onTick(long l) {
+            l /= 1000;
+            long min = l / 60;
+            long sec = l % 60;
+//            message.what = 1;
+            message.arg1 = (int) min;
+            message.arg2 = (int) sec;
+            myTimeHandler.handleMessage(message);
+            Utils.showLog("time3", min + ":" + sec, isLog);
+        }
+
+        @Override
+        public void onFinish() {
+            myGoHandler.sendEmptyMessage(2);
         }
     }
 
-
+    @Override
+    protected void onDestroy() {
+        myTimeHandler.stopCount();
+        if (mediaPlayer != null)
+            mediaPlayer.stop();
+        super.onDestroy();
+    }
 }
