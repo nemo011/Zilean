@@ -19,4 +19,4 @@ A light-weight time management app.(unfinished)
 
 4、背景图片设置
 
-5、时间到了振动提醒
+5、时间到了振动提醒和铃声提醒
