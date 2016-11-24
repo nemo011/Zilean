@@ -34,8 +34,9 @@ import java.io.IOException;
 
 public class MainActivity extends AppCompatActivity {
     //    private final boolean isTest = false;
-    private final boolean isLog = false;
+    private final boolean isLog = true;
     private final int REQUEST_SET = 1;
+    private int back_count = 0;
     private boolean isTest = false;
 
     @ViewInject(R.id.activity_main)
@@ -87,6 +88,11 @@ public class MainActivity extends AppCompatActivity {
         super.onCreate(savedInstanceState);
         setContentView(R.layout.activity_main);
         x.view().inject(this);
+        if (!isTaskRoot()) {
+            Utils.showLog("MainActivity","创建2次",isLog);
+            finish();
+            return;
+        }
         init();
         setBackground();
     }
@@ -112,8 +118,8 @@ public class MainActivity extends AppCompatActivity {
         mediaPlayer.setAudioStreamType(AudioManager.STREAM_MUSIC);
         mediaPlayer.setOnCompletionListener(new MediaPlayer.OnCompletionListener() {
             @Override
-            public void onCompletion(MediaPlayer mediaPlayer) {
-                mediaPlayer.seekTo(0);
+            public void onCompletion(MediaPlayer player) {
+                player.seekTo(0);
             }
         });
         AssetFileDescriptor file = this.getResources().openRawResourceFd(R.raw.beep);
@@ -320,7 +326,7 @@ public class MainActivity extends AppCompatActivity {
                             break;
                     }
                     break;
-                case 3:
+                case 3://
                     break;
                 default:
                     break;
@@ -363,7 +369,7 @@ public class MainActivity extends AppCompatActivity {
             message.arg1 = (int) min;
             message.arg2 = (int) sec;
             myTimeHandler.handleMessage(message);
-            Utils.showLog("time3", min + ":" + sec, isLog);
+//            Utils.showLog("time3", min + ":" + sec, isLog);
         }
 
         @Override
@@ -373,10 +379,46 @@ public class MainActivity extends AppCompatActivity {
     }
 
     @Override
+    public void onBackPressed() {
+        new Thread(new Runnable() {
+            @Override
+            public void run() {
+                if (back_count == 0) {
+                    myTimeHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            Utils.getToast(MainActivity.this, "再按一次退出程序").show();
+                        }
+                    });
+                } else if (back_count == 1) {
+                    myTimeHandler.post(new Runnable() {
+                        @Override
+                        public void run() {
+                            MainActivity.this.finish();
+                        }
+                    });
+                }
+                back_count++;
+                try {
+                    Thread.sleep(2000);
+                } catch (InterruptedException e) {
+                    e.printStackTrace();
+                }
+                back_count = 0;
+            }
+        }).start();
+    }
+
+
+    @Override
     protected void onDestroy() {
-        myTimeHandler.stopCount();
-        if (mediaPlayer != null)
+        if (myTimeHandler != null) {
+            myTimeHandler.stopCount();
+        }
+        if (mediaPlayer != null) {
             mediaPlayer.stop();
+            mediaPlayer.release();
+        }
         super.onDestroy();
     }
 }

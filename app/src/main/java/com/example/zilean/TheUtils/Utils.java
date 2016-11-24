@@ -1,8 +1,11 @@
 package com.example.zilean.TheUtils;
 
+import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.AsyncTask;
+import android.os.Looper;
 import android.util.Log;
+import android.widget.Toast;
 
 import java.io.File;
 import java.io.FileInputStream;
@@ -102,5 +105,12 @@ public class Utils {
         if (a == 0 || b == 0) return 1;
         if (a % b == 0) return b;
         else return gcd(b, a % b);
+    }
+
+    private static Toast toast;
+
+    public static Toast getToast(Context context, String str) {
+        toast = Toast.makeText(context, str, Toast.LENGTH_SHORT);
+        return toast;
     }
 }
