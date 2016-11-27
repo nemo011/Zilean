@@ -503,15 +503,15 @@ public class MainActivity extends AppCompatActivity {
         }
 
         public TomatoCount(int min, int type) {
-            this(isTest ? min * 1000L : min * 60000L, 100L);//时分互换
-//            this(isTest ? 60000L : min * 60000L, 100L);//固定1分钟
+//            this(isTest ? min * 1000L : min * 60000L, 100L);//时分互换
+            this(isTest ? 60000L : min * 60000L, 100L);//固定1分钟
             this.type = type;
             message.what = 1;
             if (isTest) {
-                message.arg1 = 0;
-                message.arg2 = min;//时分互换
-//                message.arg1 = 1;
-//                message.arg2 = 0;//固定1分钟
+//                message.arg1 = 0;
+//                message.arg2 = min;//时分互换
+                message.arg1 = 1;
+                message.arg2 = 0;//固定1分钟
             } else {
                 message.arg1 = min;
                 message.arg2 = 0;
