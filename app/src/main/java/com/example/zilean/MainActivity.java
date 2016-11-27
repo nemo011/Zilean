@@ -13,7 +13,6 @@ import android.os.Handler;
 import android.os.Message;
 import android.os.Vibrator;
 import android.support.v7.app.AppCompatActivity;
-import android.util.Log;
 import android.view.View;
 import android.widget.CheckBox;
 import android.widget.CompoundButton;
@@ -22,6 +21,9 @@ import android.widget.ImageView;
 import android.widget.RelativeLayout;
 import android.widget.TextView;
 
+import com.example.zilean.Bean.DailyTime;
+import com.example.zilean.Bean.UseRecord;
+import com.example.zilean.Database.MyDatabase;
 import com.example.zilean.TheUtils.Constant;
 import com.example.zilean.TheUtils.Utils;
 
@@ -31,6 +33,8 @@ import org.xutils.x;
 
 import java.io.File;
 import java.io.IOException;
+import java.util.Timer;
+import java.util.TimerTask;
 
 public class MainActivity extends AppCompatActivity {
     //    private final boolean isTest = false;
@@ -66,8 +70,21 @@ public class MainActivity extends AppCompatActivity {
     @ViewInject(R.id.ibtn_go)
     private ImageButton ibtn_go;
 
-    private MyTimeHandler myTimeHandler;
+    @ViewInject(R.id.tv_sumtime)
+    private TextView tv_sumtime;
+
+    @ViewInject(R.id.tv_weektime)
+    private TextView tv_weektime;
+
+    @ViewInject(R.id.tv_daytime)
+    private TextView tv_daytime;
+
+    @ViewInject(R.id.tv_alive)
+    private TextView tv_alive;
+
+    private MyClockHandler myClockHandler;
     private MyGoHandler myGoHandler;
+    private MyCountHandler myCountHandler;
     private int[] imageId;
     private String[] stateType;
     private SharedPreferences sharedPreferences;
@@ -80,6 +97,16 @@ public class MainActivity extends AppCompatActivity {
     private boolean autoRest;
     private boolean isShark;
     private boolean isRing;
+    private MyDatabase myDatabase;
+    private String username;
+    private String dateNow;
+    private String sumTime;
+    private String weekTime;
+    private String recordDate;
+    private DailyTime dailyTime;
+    private UseRecord useRecord;
+    private Timer timer;
+//    private String
 
 
     @Override
@@ -89,7 +116,7 @@ public class MainActivity extends AppCompatActivity {
         setContentView(R.layout.activity_main);
         x.view().inject(this);
         if (!isTaskRoot()) {
-            Utils.showLog("MainActivity","创建2次",isLog);
+            Utils.showLog("MainActivity", "创建2次", isLog);
             finish();
             return;
         }
@@ -107,9 +134,11 @@ public class MainActivity extends AppCompatActivity {
         autoRest = sharedPreferences.getBoolean("autoRest", false);
         isShark = sharedPreferences.getBoolean("isShark", true);
         isRing = sharedPreferences.getBoolean("isRing", false);
-        myTimeHandler = new MyTimeHandler();
-        myTimeHandler.setTomatoCount(new TomatoCount(work, Constant.TOMATOTYPE_WORK));
+        username = sharedPreferences.getString("username", Constant.DEFAULT_USERNAME);
+        myClockHandler = new MyClockHandler();
+        myClockHandler.setTomatoCount(new TomatoCount(work, Constant.TOMATOTYPE_WORK));
         myGoHandler = new MyGoHandler();
+        myCountHandler = new MyCountHandler();
         imageId = new int[]{R.drawable.go, R.drawable.stop};
         stateType = new String[]{"工作", "短休息", "长休息"};
         //铃声
@@ -133,6 +162,80 @@ public class MainActivity extends AppCompatActivity {
             e.printStackTrace();
             mediaPlayer = null;
         }
+        timer = new Timer();
+//        timer.schedule(new MyAliveTask(), 5000, 300000);
+        myDatabase = new MyDatabase(MainActivity.this);
+        initTimeRecord(username);
+    }
+
+    private void initTimeRecord(String user) {
+        updateShareKey(user);
+        if (checkDateChange()) {
+            updateShareValue();
+        } else {
+            dailyTime = myDatabase.getDailyTime(username, dateNow);
+        }
+        updateTimeRecord(dailyTime.getTime());
+    }
+
+    private void updateShareKey(String user) {
+        sumTime = "sumTime_" + user;
+        weekTime = "weekTime_" + user;
+        recordDate = "recordDate_" + user;
+    }
+
+    private void updateShareValue() {
+        //数据库
+        dailyTime = new DailyTime(0, username, 0, dateNow);
+        dailyTime.setId(myDatabase.insertDailyTime(dailyTime));
+        //share
+        String datePast = Utils.getAnyDate(Constant.DATE_FORMAT, -7);
+        int[] time = myDatabase.getSumTime(username, dateNow, datePast);
+        sharedPreferences.edit()
+                .putInt(sumTime, time[0])
+                .putInt(weekTime, time[1])
+                .putString(recordDate, dateNow)
+                .apply();
+    }
+
+    private boolean checkDateChange() {
+        boolean dateChange = false;
+        dateNow = Utils.getCurrentTimeOrDate(Constant.DATE_FORMAT);
+        if (sharedPreferences.getString(recordDate, "").compareTo(dateNow) < 0) {
+            dateChange = true;
+        }
+        return dateChange;
+    }
+
+    private void updateTimeRecord(int dayT) {
+        int sumT = sharedPreferences.getInt(sumTime, 0) + dayT;
+        int weekT = sharedPreferences.getInt(weekTime, 0) + dayT;
+        myCountHandler.sendMessage(Utils.getMessage(0, sumT, 0));
+        myCountHandler.sendMessage(Utils.getMessage(1, weekT, 0));
+        myCountHandler.sendMessage(Utils.getMessage(2, dayT, 0));
+    }
+
+    private void startUseRecord(int time, String begin) {
+        useRecord = new UseRecord(0, username, time, dateNow, begin, "", 0, "");
+        useRecord.setId(myDatabase.insertUseRecord(useRecord));
+    }
+
+    private void cancelUseRecord(String cancelReason) {
+        myDatabase.updateUseRecordCancle(useRecord.getId(), cancelReason);
+    }
+
+    private void finishUseRecord(String end) {
+        if (checkDateChange()) updateShareValue();
+
+        myDatabase.updateUseRecordFinish(useRecord.getId(), dateNow, end);
+        updateDailyTime(useRecord.getTime());
+    }
+
+    private void updateDailyTime(int min) {
+        myDatabase.updateDayTime(dailyTime.getId(), min);
+        int time = dailyTime.getTime() + min;
+        dailyTime.setTime(time);
+        updateTimeRecord(time);
     }
 
     public void startRemind(long[] vibratorTime) {
@@ -153,6 +256,14 @@ public class MainActivity extends AppCompatActivity {
         //铃声提醒
         if (mediaPlayer != null && isRing) {
             mediaPlayer.start();
+        }
+    }
+
+    private class MyAliveTask extends TimerTask {
+
+        @Override
+        public void run() {
+
         }
     }
 
@@ -191,7 +302,29 @@ public class MainActivity extends AppCompatActivity {
             if (data.getBooleanExtra("isBackground", false)) {
                 setBackground();
             }
-            myTimeHandler.stopCount();
+            myClockHandler.stopCount(true);
+        }
+    }
+
+    public class MyCountHandler extends Handler {
+        @Override
+        public void handleMessage(Message msg) {
+            switch (msg.what) {
+                case 0:
+                    tv_sumtime.setText(Utils.getStringFromMin(msg.arg1));
+                    break;
+                case 1:
+                    tv_weektime.setText(Utils.getStringFromMin(msg.arg1));
+                    break;
+                case 2:
+                    tv_daytime.setText(Utils.getStringFromMin(msg.arg1));
+                    break;
+                case 3:
+                    tv_alive.setText("" + msg.arg1);
+                    break;
+                default:
+                    break;
+            }
         }
     }
 
@@ -205,17 +338,17 @@ public class MainActivity extends AppCompatActivity {
                     if (!isClick) {
                         ibtn_go.setImageResource(imageId[1]);
                         isClick = true;
-                        myTimeHandler.startCount();
+                        myClockHandler.startCount();
                     }
                     break;
                 case 1://点击stop
                     if (isClick) {
-                        myTimeHandler.stopCount();
+                        myClockHandler.stopCount();
                     }
                     break;
                 case 2://时间到
                     if (isClick) {
-                        myTimeHandler.nextCount();
+                        myClockHandler.nextCount();
                     }
                     break;
                 case 3://
@@ -231,7 +364,7 @@ public class MainActivity extends AppCompatActivity {
     }
 
     public void setViewText(final int min, final int sec) {
-        myTimeHandler.post(new Runnable() {
+        myClockHandler.post(new Runnable() {
             @Override
             public void run() {
                 tv_time.setText(String.format("%02d", min) + ":" + String.format("%02d", sec));
@@ -252,12 +385,14 @@ public class MainActivity extends AppCompatActivity {
         }
     }
 
-    public class MyTimeHandler extends Handler {
+    public class MyClockHandler extends Handler {
         int tomato = 0;
         int rest = 0;
         TomatoCount tomatoCount = null;
+        boolean isStart = false;
+        int type = Constant.TOMATOTYPE_WORK;
 
-        public MyTimeHandler() {
+        public MyClockHandler() {
         }
 
         public void setTomatoCount(TomatoCount tomatoCount) {
@@ -265,17 +400,35 @@ public class MainActivity extends AppCompatActivity {
         }
 
         public void startCount() {
-            if (tomatoCount != null)
+            if (tomatoCount != null) {
                 tomatoCount.start();
+                isStart = true;
+
+                if (type == Constant.TOMATOTYPE_WORK)
+                    startUseRecord(work, Utils.getCurrentTimeOrDate(Constant.TIME_FORMAT));
+            }
         }
 
         public void nextCount() {
+            if (type == Constant.TOMATOTYPE_WORK && isStart)
+                finishUseRecord(Utils.getCurrentTimeOrDate(Constant.TIME_FORMAT));
             sendEmptyMessage(0);
         }
 
         public void stopCount() {
-            if (tomatoCount != null)
+            stopCount(false);
+        }
+
+        public void stopCount(boolean isOnActivityResult) {
+            if (tomatoCount != null) {
                 tomatoCount.cancel();
+
+                if (type == Constant.TOMATOTYPE_WORK && isStart) {
+                    if (isOnActivityResult)
+                        cancelUseRecord(Constant.DEFAULT_CANCEL);
+                    else cancelUseRecord("");
+                }
+            }
             sendEmptyMessage(2);
             myGoHandler.sendEmptyMessage(3);
         }
@@ -311,7 +464,7 @@ public class MainActivity extends AppCompatActivity {
                     setViewText(msg.arg1, msg.arg2);
                     break;
                 case 2://当前计时取消
-                    int type = tomatoCount.getType();
+//                    int type = tomatoCount.getType();
                     switch (type) {
                         case Constant.TOMATOTYPE_WORK:
                             tomatoCount = new TomatoCount(work, Constant.TOMATOTYPE_WORK);
@@ -327,6 +480,8 @@ public class MainActivity extends AppCompatActivity {
                     }
                     break;
                 case 3://
+                    isStart = false;
+                    type = tomatoCount.getType();
                     break;
                 default:
                     break;
@@ -343,17 +498,21 @@ public class MainActivity extends AppCompatActivity {
         }
 
         public TomatoCount(int min, int type) {
-            this(isTest ? min * 1000L : min * 60000L, 100L);
+//            this(isTest ? min * 1000L : min * 60000L, 100L);//时分互换
+            this(isTest ? 60000L : min * 60000L, 100L);//固定1分钟
             this.type = type;
             message.what = 1;
             if (isTest) {
-                message.arg1 = 0;
-                message.arg2 = min;
+//                message.arg1 = 0;
+//                message.arg2 = min;//时分互换
+                message.arg1 = 1;
+                message.arg2 = 0;//固定1分钟
             } else {
                 message.arg1 = min;
                 message.arg2 = 0;
             }
-            myTimeHandler.handleMessage(message);
+            myClockHandler.handleMessage(message);
+            myClockHandler.sendEmptyMessage(3);
         }
 
         public int getType() {
@@ -368,7 +527,7 @@ public class MainActivity extends AppCompatActivity {
 //            message.what = 1;
             message.arg1 = (int) min;
             message.arg2 = (int) sec;
-            myTimeHandler.handleMessage(message);
+            myClockHandler.handleMessage(message);
 //            Utils.showLog("time3", min + ":" + sec, isLog);
         }
 
@@ -376,6 +535,7 @@ public class MainActivity extends AppCompatActivity {
         public void onFinish() {
             myGoHandler.sendEmptyMessage(2);
         }
+
     }
 
     @Override
@@ -384,14 +544,14 @@ public class MainActivity extends AppCompatActivity {
             @Override
             public void run() {
                 if (back_count == 0) {
-                    myTimeHandler.post(new Runnable() {
+                    myClockHandler.post(new Runnable() {
                         @Override
                         public void run() {
                             Utils.getToast(MainActivity.this, "再按一次退出程序").show();
                         }
                     });
                 } else if (back_count == 1) {
-                    myTimeHandler.post(new Runnable() {
+                    myClockHandler.post(new Runnable() {
                         @Override
                         public void run() {
                             MainActivity.this.finish();
@@ -412,12 +572,15 @@ public class MainActivity extends AppCompatActivity {
 
     @Override
     protected void onDestroy() {
-        if (myTimeHandler != null) {
-            myTimeHandler.stopCount();
+        if (myClockHandler != null) {
+            myClockHandler.stopCount();
         }
         if (mediaPlayer != null) {
             mediaPlayer.stop();
             mediaPlayer.release();
+        }
+        if (myDatabase != null) {
+            myDatabase.close();
         }
         super.onDestroy();
     }

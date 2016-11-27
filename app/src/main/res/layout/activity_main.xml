@@ -33,21 +33,21 @@
                 android:id="@+id/cb_context1"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:visibility="gone"
-                android:text="123" />
+                android:text="123"
+                android:visibility="gone" />
 
             <CheckBox
                 android:id="@+id/cb_context2"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:visibility="gone"
-                android:text="234" />
+                android:text="234"
+                android:visibility="gone" />
 
             <CheckBox
                 android:id="@+id/cb_context3"
                 android:layout_width="match_parent"
                 android:layout_height="wrap_content"
-                android:text="测试开关（互换分秒）" />
+                android:text="测试开关（1分计时）" />
         </LinearLayout>
 
         <ImageButton
@@ -74,8 +74,8 @@
                 android:id="@+id/ibtn_go"
                 android:layout_width="110dp"
                 android:layout_height="110dp"
-                android:src="@drawable/go"
-                android:background="#0fff"/>
+                android:background="#0fff"
+                android:src="@drawable/go" />
 
             <TextView
                 android:id="@+id/tv_state"
@@ -83,9 +83,9 @@
                 android:layout_height="wrap_content"
                 android:layout_centerInParent="true"
                 android:layout_marginTop="10dp"
-                android:gravity="center"
-                android:text="工作"
                 android:background="@drawable/go_back"
+                android:gravity="center"
+                android:text="专注"
                 android:textStyle="bold" />
         </RelativeLayout>
 
@@ -102,7 +102,89 @@
             android:text="25:00"
             android:textSize="50dp" />
 
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentLeft="true"
+            android:layout_alignParentTop="true"
+            android:layout_margin="10dp"
+            android:orientation="vertical">
 
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="2dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="总时长：" />
+
+                <TextView
+                    android:id="@+id/tv_sumtime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="x天y时z分" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="2dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="周时长：" />
+
+                <TextView
+                    android:id="@+id/tv_weektime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="x天y时z分" />
+            </LinearLayout>
+
+            <LinearLayout
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:layout_margin="2dp"
+                android:orientation="horizontal">
+
+                <TextView
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="日时长：" />
+
+                <TextView
+                    android:id="@+id/tv_daytime"
+                    android:layout_width="wrap_content"
+                    android:layout_height="wrap_content"
+                    android:text="y时z分" />
+            </LinearLayout>
+        </LinearLayout>
+
+        <LinearLayout
+            android:layout_width="wrap_content"
+            android:layout_height="wrap_content"
+            android:layout_alignParentBottom="true"
+            android:layout_alignParentRight="true"
+            android:layout_margin="10dp"
+            android:orientation="horizontal"
+            android:visibility="gone">
+
+            <TextView
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="在线人数：" />
+
+            <TextView
+                android:id="@+id/tv_alive"
+                android:layout_width="wrap_content"
+                android:layout_height="wrap_content"
+                android:text="1000" />
+        </LinearLayout>
     </RelativeLayout>
 
 

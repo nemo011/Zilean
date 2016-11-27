@@ -4,6 +4,7 @@ import android.content.Context;
 import android.graphics.Bitmap;
 import android.os.AsyncTask;
 import android.os.Looper;
+import android.os.Message;
 import android.util.Log;
 import android.widget.Toast;
 
@@ -12,6 +13,9 @@ import java.io.FileInputStream;
 import java.io.FileNotFoundException;
 import java.io.FileOutputStream;
 import java.io.IOException;
+import java.text.SimpleDateFormat;
+import java.util.Calendar;
+import java.util.Date;
 
 /**
  * Created by 王跃_ on 2016/11/21.
@@ -112,5 +116,41 @@ public class Utils {
     public static Toast getToast(Context context, String str) {
         toast = Toast.makeText(context, str, Toast.LENGTH_SHORT);
         return toast;
+    }
+
+    public static String getCurrentTimeOrDate(String format) {
+        return new SimpleDateFormat(format).format(new Date());
+    }
+    public static String getAnyDate(String format,int offset) {
+        Calendar calendar = Calendar.getInstance();
+        calendar.add(Calendar.DATE, offset);
+        return new SimpleDateFormat(format).format(calendar.getTime());
+    }
+    public static String getStringFromMin(int time) {
+        StringBuffer stringBuffer = new StringBuffer();
+        int min = time % 60;
+        time /= 60;
+        if (time > 0) {
+            int hour = time % 24;
+            time /= 24;
+            if (time > 0) {
+//                stringBuffer.append(String.format("%02d", time)).append("天 ");
+                stringBuffer.append(time).append("天 ");
+            }
+//            stringBuffer.append(String.format("%02d", hour)).append("时 ");
+            stringBuffer.append(hour).append("时 ");
+        }
+//        stringBuffer.append(String.format("%02d", min)).append("分 ");
+        stringBuffer.append(min).append("分 ");
+
+        return stringBuffer.toString();
+    }
+
+    public static Message getMessage(int what, int arg1, int arg2) {
+        Message message = Message.obtain();
+        message.what = what;
+        message.arg1 = arg1;
+        message.arg2 = arg2;
+        return message;
     }
 }
