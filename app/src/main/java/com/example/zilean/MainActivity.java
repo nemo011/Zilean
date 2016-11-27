@@ -140,7 +140,7 @@ public class MainActivity extends AppCompatActivity {
         myGoHandler = new MyGoHandler();
         myCountHandler = new MyCountHandler();
         imageId = new int[]{R.drawable.go, R.drawable.stop};
-        stateType = new String[]{"工作", "短休息", "长休息"};
+        stateType = new String[]{"专注", "短休息", "长休息"};
         //铃声
         this.setVolumeControlStream(AudioManager.STREAM_MUSIC);
         mediaPlayer = new MediaPlayer();
@@ -236,6 +236,7 @@ public class MainActivity extends AppCompatActivity {
         int time = dailyTime.getTime() + min;
         dailyTime.setTime(time);
         updateTimeRecord(time);
+//        Utils.showLog("time",""+time,isLog);
     }
 
     public void startRemind(long[] vibratorTime) {
@@ -410,6 +411,7 @@ public class MainActivity extends AppCompatActivity {
         }
 
         public void nextCount() {
+//            Utils.showLog("type",type+":"+isStart,isLog);
             if (type == Constant.TOMATOTYPE_WORK && isStart)
                 finishUseRecord(Utils.getCurrentTimeOrDate(Constant.TIME_FORMAT));
             sendEmptyMessage(0);
@@ -448,7 +450,7 @@ public class MainActivity extends AppCompatActivity {
                         }
                         startRemind(new long[]{0, 1000, 500, 2000});
                         if (autoRest)
-                            startCount();
+                            sendEmptyMessage(4);
                         else myGoHandler.sendEmptyMessage(3);
                     } else {
                         rest++;
@@ -456,7 +458,7 @@ public class MainActivity extends AppCompatActivity {
                         tv_state.setText(stateType[0]);
                         startRemind(new long[]{1000});
                         if (autoWork)
-                            startCount();
+                            sendEmptyMessage(4);
                         else myGoHandler.sendEmptyMessage(3);
                     }
                     break;
@@ -483,6 +485,9 @@ public class MainActivity extends AppCompatActivity {
                     isStart = false;
                     type = tomatoCount.getType();
                     break;
+                case 4://自动计时
+                    startCount();
+                    break;
                 default:
                     break;
             }
@@ -498,15 +503,15 @@ public class MainActivity extends AppCompatActivity {
         }
 
         public TomatoCount(int min, int type) {
-//            this(isTest ? min * 1000L : min * 60000L, 100L);//时分互换
-            this(isTest ? 60000L : min * 60000L, 100L);//固定1分钟
+            this(isTest ? min * 1000L : min * 60000L, 100L);//时分互换
+//            this(isTest ? 60000L : min * 60000L, 100L);//固定1分钟
             this.type = type;
             message.what = 1;
             if (isTest) {
-//                message.arg1 = 0;
-//                message.arg2 = min;//时分互换
-                message.arg1 = 1;
-                message.arg2 = 0;//固定1分钟
+                message.arg1 = 0;
+                message.arg2 = min;//时分互换
+//                message.arg1 = 1;
+//                message.arg2 = 0;//固定1分钟
             } else {
                 message.arg1 = min;
                 message.arg2 = 0;
